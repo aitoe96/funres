@@ -33,7 +33,7 @@ FunRes <- function(
   consv.thrs        = 0.1,
   n                 = 1000,
   ncores            = 4,
-  z.score-cutoff    = 2,
+  z.score.cutoff    = 2,
   tissue.name,
   temp.folder.name,
   out.path,
@@ -45,7 +45,7 @@ FunRes <- function(
 
   cat("Creating input parameters file\n\n")
   parms <- c("tissue.name","out.path","temp.folder.name","species",
-             "sighot.cutoff","sighot.percentile","consv.thrs","n","ncores")
+             "sighot.cutoff","sighot.percentile","consv.thrs","n","ncores","z.score.cutoff")
   parms.file <- do.call(rbind, lapply(parms, function(x) paste0(x, " = ", get(x))))
   write.table(parms.file, file = file.path(out.path, paste0("input_parameters_", Sys.Date(), ".txt")),
               sep = "\t", row.names = FALSE, quote = FALSE, col.names = FALSE)
