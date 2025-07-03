@@ -7,7 +7,7 @@ Maintainer: Aitor Martínez Pérez <aitoe96@gmail.com>
 Description: Toolkit for functional resolution of cell states from scRNA-seq. Although not originally
  developed by me, I have made modifications to adapt and install it.
 Depends: R (>= 4.0.0)
-Imports: clusterCrit,clusterProfiler,data.table,doParallel,dplyr,ggplot2,gtools,igraph,Matrix,org.Hs.eg.db,org.Mm.eg.db,pheatmap,plyr,reshape2,rlist,RSpectra,Seurat,snow,stats,stringr,taRifx,textshape
+Imports: clusterCrit,clusterProfiler,data.table,doParallel,dplyr,ggplot2,gtools,igraph,Matrix,org.Hs.eg.db,org.Mm.eg.db,pheatmap,plyr,reshape2,rlist,RSpectra,Seurat,snow,stats,stringr,taRifx,textshape,selma
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
