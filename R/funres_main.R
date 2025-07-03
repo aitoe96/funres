@@ -117,7 +117,7 @@ FunRes <- function(
   colnames(data.lig.exp) <- paste0("Ligand.", colnames(data.lig.exp))
   L.frame <- dplyr::inner_join(
     data.lig.exp, LR[-1], by = c("Ligand.gene" = "Ligand")
-  ) dplyr::inner_join(
+  )::inner_join(
     data.lig.exp, LR[-1], by = c("Ligand.gene" = "Ligand")
   )
   L.frame <- L.frame[L.frame$Ligand.exp.perc > consv.thrs, ]
