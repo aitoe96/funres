@@ -18,18 +18,14 @@ if (!requireNamespace("BiocManager", quietly=TRUE))
 ```
  2) Instalar las dependencias de Bioconductor
 ```r
-BiocManager::install(c(
-  "clusterProfiler", "org.Hs.eg.db", "org.Mm.eg.db", "RSpectra"
-))
+BiocManager::install(c("clusterProfiler", "org.Hs.eg.db", "org.Mm.eg.db", "RSpectra"))
 ```
 
  3) Install CRAN  dependencies
 ```r
-install.packages(c(
-  "data.table","doParallel","dplyr","ggplot2","gtools",
+install.packages(c("data.table","doParallel","dplyr","ggplot2","gtools",
   "igraph","Matrix","pheatmap","plyr","reshape2","rlist",
-  "Seurat","snow","stringr","taRifx","textshape"
-))
+  "Seurat","snow","stringr","taRifx","textshape"))
 ```
  4) Instalar funres desde GitHub
 ```r
@@ -42,9 +38,11 @@ remotes::install_github("aitoe96/funres")
 
 
 #### Authors
-FunRes was developed in the [Computational Biology Group](https://wwwen.uni.lu/lcsb/research/computational_biology) by
 
-_Modified and packaged by Aitor Pérez._
+_Modified and packaged by Aitor Martínez Pérez._ 
+- [Aitor Martínez Pérez](https://www.cicbiogune.es/people/amperez)
+
+  FunRes was developed in the [Computational Biology Group](https://wwwen.uni.lu/lcsb/research/computational_biology) by
 
 - [Kartikeya Singh](https://wwwen.uni.lu/lcsb/people/kartikeya_singh)
 - [Sascha Jung](https://www.cicbiogune.es/people/sjung)
