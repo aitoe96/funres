@@ -12,11 +12,11 @@
 #' @param consv.thrs Numeric; conservation threshold (default 0.1).
 #' @param n Integer; number of bootstrapping iterations (default 1000).
 #' @param ncores Integer; number of cores to use (default 4).
-#' @param z_score_cutoff Numeric; z-score cutoff after bootstrap (default 2).
-#' @param tissue_name Character; label for your tissue (used in output filenames).
-#' @param temp_folder Character; name of temporary subfolder (e.g. "tmp").
-#' @param out_path Character; path where results will be written.
-#' @param gen_markers Logical; whether to generate marker heatmaps (default TRUE).
+#' @param z.score.cutoff Numeric; z-score cutoff after bootstrap (default 2).
+#' @param tissue.name Character; label for your tissue (used in output filenames).
+#' @param temp.folder.name Character; name of temporary subfolder (default "tmp").
+#' @param out.path Character; path where results will be written.
+#' @param gen.markers Logical; whether to generate marker heatmaps (default TRUE).
 #'
 #' @return Invisibly returns a list with collated results, including
 #'   tissue-level and per-cell-type outputs.
@@ -37,101 +37,102 @@ FunRes <- function(
   out.path,
   gen.markers       = TRUE
 ) {
-  # === Create output folders ===
-  dir.create(out_path, showWarnings = FALSE, recursive = TRUE)
-  dir.create(file.path(out_path, temp_folder), showWarnings = FALSE)
+  # === 1. Create output directories ===
+  dir.create(out.path, showWarnings = FALSE, recursive = TRUE)
+  dir.create(file.path(out.path, temp.folder.name), showWarnings = FALSE)
 
-  # === Save input parameters ===
-  params <- list(
-    tissue.name      = tissue.name,
-    out.path         = out.path,
-    temp.folder.name = temp.folder.name,
-    species          = species,
-    sighot.cutoff    = sighot.cutoff,
-    sighot.percentile= sighot.percentile,
-    consv.thrs       = consv.thrs,
-    n                = n,
-    ncores           = ncores,
-    z.score.cutoff   = z.score.cutoff
-  )
-  param_table <- data.frame(
-    parameter = names(params),
-    value     = unlist(params),
+  # === 2. Save input parameters ===
+  params <- data.frame(
+    parameter = c("tissue.name", "out.path", "temp.folder.name", "species",
+                  "sighot.cutoff", "sighot.percentile", "consv.thrs",
+                  "n", "ncores", "z.score.cutoff"),
+    value = c(tissue.name, out.path, temp.folder.name, species,
+              sighot.cutoff, sighot.percentile, consv.thrs,
+              n, ncores, z.score.cutoff),
     stringsAsFactors = FALSE
   )
-    write.table(
-    param_table,
+  write.table(
+    params,
     file = file.path(out.path, paste0("input_parameters_", Sys.Date(), ".txt")),
-    sep = "	", row.names = FALSE, quote = FALSE
-  ), ".txt")),
-    sep = "\t", row.names = FALSE, quote = FALSE
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
   )
 
-  # === Standardize annotation ===
+  # === 3. Standardize annotation ===
   colnames(anno.tbl)[1:2] <- c("cell.name", "cell.type")
   freq <- table(anno.tbl$cell.type)
   rm.types <- names(freq)[freq <= 10]
 
-  # === Rename data columns by cell type ===
-  new_names <- sapply(colnames(data), function(cid) {
+  # === 4. Rename data columns by cell type ===
+  colnames(data) <- sapply(colnames(data), function(cid) {
     ct <- anno.tbl$cell.type[anno.tbl$cell.name == cid]
     make.names(ct)
   })
-  colnames(data) <- new_names
 
-  # === Load background data ===
+  # === 5. Load background data ===
   species_up <- toupper(species)
   if (species_up == "HUMAN") {
     data("HUMAN_Background_data", package = "funres", envir = environment())
-    tab <- read.table(
-      system.file("extdata", "uniprot-filtered-organism-HSA.tab", package = "funres"),
-      sep = "\t", header = FALSE, stringsAsFactors = FALSE
-    )
+    tab <- read.table(system.file("extdata", "uniprot-filtered-organism-HSA.tab", package = "funres"),
+                      sep = "\t", header = FALSE, stringsAsFactors = FALSE)
     lig_col <- 2
   } else if (species_up == "MOUSE") {
     data("MOUSE_Background_data", package = "funres", envir = environment())
-    tab <- read.table(
-      system.file("extdata", "uniprot-filtered-organism-MMU.tab", package = "funres"),
-      sep = "\t", header = FALSE, stringsAsFactors = FALSE
-    )
+    tab <- read.table(system.file("extdata", "uniprot-filtered-organism-MMU.tab", package = "funres"),
+                      sep = "\t", header = FALSE, stringsAsFactors = FALSE)
     lig_col <- 3
   } else {
     stop("species must be either 'HUMAN' or 'MOUSE'")
   }
   secreted <- unique(unlist(strsplit(tab[[lig_col]], " ")))
+  LR       <- LR[LR$Ligand %in% secreted, ]
+  Ligands  <- intersect(Ligands, secreted)
 
-  LR      <- LR[LR$Ligand %in% secreted, ]
-  Ligands <- intersect(Ligands, secreted)
-
-  # === Filter interactome ===
+  # === 6. Filter interactome and TF interactions ===
   Background_signaling_interactome <-
-    Background_signaling_interactome[
-      !(Background_signaling_interactome$Source == dummy.var &
-         !(Background_signaling_interactome$Target %in% Receptors)),
-    ]
+    Background_signaling_interactome[!(Background_signaling_interactome$Source == dummy.var &
+      !(Background_signaling_interactome$Target %in% Receptors)), ]
   TF_TF_interactions <- remove.factors(TF_TF_interactions)
 
-  # === Subset populations ===
+  # === 7. Subset populations ===
   pops <- setdiff(unique(anno.tbl$cell.type), rm.types)
   anno.tbl <- anno.tbl[anno.tbl$cell.type %in% pops, ]
 
-    # === Compute ligand expression per population ===
-    data_lig_exp <- get.gene.expr(
+  # === 8. Compute ligand expression per population ===
+  data_lig_exp <- get.gene.expr(
     exp.tbl   = data,
     anno.tbl  = anno.tbl,
     genes     = intersect(Ligands, rownames(data)),
     cell.type = pops
-  ) {
-    cell_file <- file.path(out_path, temp_folder, paste0("temp_", ct, ".Rds"))
-    if (!file.exists(cell_file)) {
-      data_ct <- data[, colnames(data) == ct, drop = FALSE]
-      saveRDS(data_ct, file = cell_file)
-    }
+  )
+  if (is.null(dim(data_lig_exp))) {
+    data_lig_exp <- matrix(
+      data_lig_exp,
+      ncol = 1,
+      dimnames = list(names(data_lig_exp), NULL)
+    )
   }
+  colnames(data_lig_exp) <- paste0("Ligand.", colnames(data_lig_exp))
 
-  results_list <- list()
+  L_frame <- dplyr::inner_join(
+    data.frame(Ligand.gene = rownames(data_lig_exp), data_lig_exp, check.names = FALSE),
+    LR[, -1],
+    by = c("Ligand.gene" = "Ligand")
+  )
+
+  # === 9. Save temp data ===
+  save(data, anno.tbl, data_lig_exp, L_frame,
+       file = file.path(out.path, temp.folder.name, "temp_data.RData"))
+  rm(data_lig_exp)
+
+  # === 10. Per-population analysis ===
+  results_list <- vector("list", length(pops))
+  names(results_list) <- pops
   for (ct in pops) {
-    data_ct <- readRDS(file.path(out_path, temp_folder, paste0("temp_", ct, ".Rds")))
+    data_ct <- data[, colnames(data) == ct, drop = FALSE]
+    saveRDS(data_ct, file = file.path(out.path, temp.folder.name, paste0("temp_", ct, ".Rds")))
+
     max_info <- get.cons.tfs(data_ct)
     if (is.list(max_info)) {
       sig_in <- data_ct[, max_info$tf.max.mat.cell, drop = FALSE]
@@ -154,40 +155,37 @@ FunRes <- function(
     }
   }
 
-  # === Collate results ===
-  LR_frames <- lapply(results_list, function(x) x$hotspot$path.sums)
-  LR_all    <- do.call(rbind, LR_frames)
-  RTF_info  <- do.call(rbind, lapply(names(results_list), function(ct) {
+  # === 11. Collate results ===
+  LR_all   <- do.call(rbind, lapply(results_list, function(x) x$hotspot$path.sums))
+  RTF_info <- do.call(rbind, lapply(names(results_list), function(ct) {
     df <- results_list[[ct]]$hotspot$iTF.targets
     cbind(celltype = ct, df)
   }))
 
-  # === Save collated outputs ===
-  saveRDS(LR_all, file = file.path(out_path, "tissue_LR_no_bootstrap.Rds"))
-  write.table(LR_all, file = file.path(out_path, "tissue_LR_no_bootstrap.txt"),
+  # Save collated outputs
+  saveRDS(LR_all,   file = file.path(out.path, "tissue_LR_no_bootstrap.Rds"))
+  write.table(LR_all, file = file.path(out.path, "tissue_LR_no_bootstrap.txt"),
               sep = "\t", row.names = FALSE, quote = FALSE)
 
-  # === Bootstrapping ===
-  load(file.path(out_path, temp_folder, "temp_data.RData"))
-  final <- Bootstrap.NewScoring(
-    data, LR = LR_all, R.TF = RTF_info,
-    significance.cutoff = 0.7
-  )
-  saveRDS(final, file = file.path(out_path, "tissue_LR_with_bootstrap.Rds"))
-  write.table(final, file = file.path(out_path, "tissue_LR_with_bootstrap.txt"),
+  # === 12. Bootstrapping ===
+  load(file.path(out.path, temp.folder.name, "temp_data.RData"))
+  final <- Bootstrap.NewScoring(data, LR = LR_all, R.TF = RTF_info,
+                                significance.cutoff = 0.7)
+  saveRDS(final, file = file.path(out.path, "tissue_LR_with_bootstrap.Rds"))
+  write.table(final, file = file.path(out.path, "tissue_LR_with_bootstrap.txt"),
               sep = "\t", row.names = FALSE, quote = FALSE)
 
   results_list$final <- final
-  saveRDS(results_list, file = file.path(out_path, paste0("output_", tissue_name, ".Rds")))
+  saveRDS(results_list, file = file.path(out.path, paste0("output_", tissue.name, ".Rds")))
 
-  # === Generate markers if requested ===
-  if (gen_markers) {
+  # === 13. Generate markers if requested ===
+  if (gen.markers) {
     partitions <- funres_partitions(
-      output  = results_list,
-      out.path = out_path,
-      tissue.name = tissue_name
+      output      = results_list,
+      out.path    = out.path,
+      tissue.name = tissue.name
     )
-    gen.markers(partitions, out.path = out_path, tissue.name = tissue_name)
+    gen.markers(partitions, out.path = out.path, tissue.name = tissue.name)
   }
 
   invisible(results_list)
