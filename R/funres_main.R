@@ -107,9 +107,17 @@ FunRes <- function(
   anno.tbl <- anno.tbl[anno.tbl$cell.type %in% all.pops, ]
 
   # Compute ligand expression per cell type
+    # Compute ligand expression per cell type
   data.lig.exp <- get.gene.expr(data, intersect(Ligands, rownames(data)), all.pops)
+  # Ensure matrix format even if single population
+  if (is.null(dim(data.lig.exp)) || length(dim(data.lig.exp)) < 2) {
+    tmp <- data.lig.exp
+    data.lig.exp <- matrix(tmp, nrow = length(tmp), dimnames = list(names(tmp), NULL))
+  }
   colnames(data.lig.exp) <- paste0("Ligand.", colnames(data.lig.exp))
   L.frame <- dplyr::inner_join(
+    data.lig.exp, LR[-1], by = c("Ligand.gene" = "Ligand")
+  ) dplyr::inner_join(
     data.lig.exp, LR[-1], by = c("Ligand.gene" = "Ligand")
   )
   L.frame <- L.frame[L.frame$Ligand.exp.perc > consv.thrs, ]
