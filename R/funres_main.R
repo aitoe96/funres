@@ -31,11 +31,11 @@ FunRes <- function(
   consv.thrs        = 0.1,
   n                 = 1000,
   ncores            = 4,
-  z_score_cutoff    = 2,
-  tissue_name,
-  temp_folder       = "tmp",
-  out_path,
-  gen_markers       = TRUE
+  z.score.cutoff    = 2,
+  tissue.name,
+  temp.folder.name  = "tmp",
+  out.path,
+  gen.markers       = TRUE
 ) {
   # === Create output folders ===
   dir.create(out_path, showWarnings = FALSE, recursive = TRUE)
@@ -43,25 +43,27 @@ FunRes <- function(
 
   # === Save input parameters ===
   params <- list(
-    tissue_name     = tissue_name,
-    out_path        = out_path,
-    temp_folder     = temp_folder,
-    species         = species,
-    sighot_cutoff   = sighot.cutoff,
-    sighot_percentile = sighot.percentile,
-    consv_thrs      = consv.thrs,
-    n               = n,
-    ncores          = ncores,
-    z_score_cutoff  = z_score_cutoff
+    tissue.name      = tissue.name,
+    out.path         = out.path,
+    temp.folder.name = temp.folder.name,
+    species          = species,
+    sighot.cutoff    = sighot.cutoff,
+    sighot.percentile= sighot.percentile,
+    consv.thrs       = consv.thrs,
+    n                = n,
+    ncores           = ncores,
+    z.score.cutoff   = z.score.cutoff
   )
   param_table <- data.frame(
     parameter = names(params),
     value     = unlist(params),
     stringsAsFactors = FALSE
   )
-  write.table(
+    write.table(
     param_table,
-    file = file.path(out_path, paste0("input_parameters_", Sys.Date(), ".txt")),
+    file = file.path(out.path, paste0("input_parameters_", Sys.Date(), ".txt")),
+    sep = "	", row.names = FALSE, quote = FALSE
+  ), ".txt")),
     sep = "\t", row.names = FALSE, quote = FALSE
   )
 
@@ -114,37 +116,12 @@ FunRes <- function(
   anno.tbl <- anno.tbl[anno.tbl$cell.type %in% pops, ]
 
     # === Compute ligand expression per population ===
-  data_lig_exp <- get.gene.expr(
-    exp.tbl = data,
-    anno.tbl = anno.tbl,
-    genes   = intersect(Ligands, rownames(data)),
+    data_lig_exp <- get.gene.expr(
+    exp.tbl   = data,
+    anno.tbl  = anno.tbl,
+    genes     = intersect(Ligands, rownames(data)),
     cell.type = pops
-  )
-  # Ensure matrix format even if only one population
-  if (is.null(dim(data_lig_exp))) {
-    data_lig_exp <- matrix(
-      data_lig_exp,
-      ncol = 1,
-      dimnames = list(names(data_lig_exp), NULL)
-    )
-  }
-  colnames(data_lig_exp) <- paste0("Ligand.", colnames(data_lig_exp))
-
-  L_frame <- dplyr::inner_join(
-    data.frame(Ligand.gene = rownames(data_lig_exp), data_lig_exp, check.names = FALSE),
-    LR[, -1],
-    by = c("Ligand.gene" = "Ligand")
-  )
-
-  # === Save temp data ===
-  save(
-    data, anno.tbl, data_lig_exp, L_frame,
-    file = file.path(out_path, temp_folder, "temp_data.RData")
-  )
-  rm(data_lig_exp)
-
-  # === Per-population analysis ===
-  for (ct in pops) {
+  ) {
     cell_file <- file.path(out_path, temp_folder, paste0("temp_", ct, ".Rds"))
     if (!file.exists(cell_file)) {
       data_ct <- data[, colnames(data) == ct, drop = FALSE]
