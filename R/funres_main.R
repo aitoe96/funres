@@ -68,7 +68,7 @@ FunRes <- function(
 
   # Load background data and filter for species
   if (toupper(species) == "HUMAN") {
-    load(system.file("data", "HUMAN_Background_data.rda", package = "funres"), envir = environment())
+    data("HUMAN_Background_data", package = "funres", envir = environment())
     hsa_tab <- read.table(
       system.file("extdata", "uniprot-filtered-organism-HSA.tab", package = "funres"),
       sep = "\t", stringsAsFactors = FALSE, quote = "", comment.char = ""
