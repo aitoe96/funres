@@ -65,19 +65,19 @@ FunRes <- function(
   rm.types <- names(freq)[freq <= 10]
   anno.tbl <- anno.tbl[!anno.tbl$cell.type %in% rm.types, , drop = FALSE]
 
-  # 4) Rename columns of data by cell type
-  colnames(data) <- sapply(colnames(data), function(cid) {
-    idx <- which(anno.tbl$cell.name == cid)
-    if (length(idx) != 1) {
-      warning(sprintf(
-        "Cell ID '%s' not found or duplicated; keeping original name", cid
-      ))
-      return(cid)
-    }
-    make.names(anno.tbl$cell.type[idx])
-  })
+  # 4) Filter and rename columns of data by cell type
+common_ids <- intersect(colnames(data), anno.tbl$cell.name)
+if (length(common_ids) == 0) {
+  stop("No matching cell IDs between expression data and annotation table.")
+}
+data <- data[, common_ids, drop = FALSE]
+colnames(data) <- sapply(colnames(data), function(cid) {
+  idx <- which(anno.tbl$cell.name == cid)
+  # idx guaranteed length 1 since we filtered
+  make.names(anno.tbl$cell.type[idx])
+})
 
-  # 5) Load background data and filter ligands
+# 5) Load background data and filter ligands and filter ligands
   species_up <- toupper(species)
   if (species_up == "HUMAN") {
     data("HUMAN_Background_data", package = "funres", envir = environment())
