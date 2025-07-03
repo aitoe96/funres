@@ -63,40 +63,42 @@ FunRes <- function(
   colnames(anno.tbl)[1:2] <- c("cell.name", "cell.type")
   freq <- table(anno.tbl$cell.type)
   rm.types <- names(freq)[freq <= 10]
-  drops <- anno.tbl$cell.type %in% rm.types
-  anno.tbl <- anno.tbl[!drops, , drop = FALSE]
+  anno.tbl <- anno.tbl[!anno.tbl$cell.type %in% rm.types, , drop = FALSE]
 
   # 4) Rename columns of data by cell type
-  colnames(data) <- vapply(
-    colnames(data),
-    function(cid) make.names(anno.tbl$cell.type[anno.tbl$cell.name == cid]),
-    character(1)
-  )
+  colnames(data) <- sapply(colnames(data), function(cid) {
+    idx <- which(anno.tbl$cell.name == cid)
+    if (length(idx) != 1) {
+      warning(sprintf(
+        "Cell ID '%s' not found or duplicated; keeping original name", cid
+      ))
+      return(cid)
+    }
+    make.names(anno.tbl$cell.type[idx])
+  })
 
-  # 5) Load background & filter ligands
+  # 5) Load background data and filter ligands
   species_up <- toupper(species)
   if (species_up == "HUMAN") {
     data("HUMAN_Background_data", package = "funres", envir = environment())
     tab <- data.table::fread(
-      file = system.file(
-        "extdata", "uniprot-filtered-organism-HSA.tab", package = "funres"
-      ), sep = "\t", header = FALSE, fill = TRUE
+      system.file("extdata", "uniprot-filtered-organism-HSA.tab", package = "funres"),
+      sep = "\t", header = FALSE, fill = TRUE
     )
     lig_col <- 2
   } else if (species_up == "MOUSE") {
     data("MOUSE_Background_data", package = "funres", envir = environment())
     tab <- data.table::fread(
-      file = system.file(
-        "extdata", "uniprot-filtered-organism-MMU.tab", package = "funres"
-      ), sep = "\t", header = FALSE, fill = TRUE
+      system.file("extdata", "uniprot-filtered-organism-MMU.tab", package = "funres"),
+      sep = "\t", header = FALSE, fill = TRUE
     )
     lig_col <- 3
   } else {
     stop("species must be 'HUMAN' or 'MOUSE'")
   }
   secreted <- unique(unlist(strsplit(tab[[lig_col]], " ")))
-  LR      <- LR[LR$Ligand %in% secreted, ]
-  Ligands <- intersect(Ligands, secreted)
+  LR       <- LR[LR$Ligand %in% secreted, , drop = FALSE]
+  Ligands  <- intersect(Ligands, secreted)
 
   # 6) Filter interactome
   Background_signaling_interactome <-
@@ -106,10 +108,10 @@ FunRes <- function(
     ]
   TF_TF_interactions <- remove.factors(TF_TF_interactions)
 
-  # 7) Define populations
+  # 7) Populations to analyze
   pops <- unique(colnames(data))
 
-  # 8) Compute ligand expression per pop
+  # 8) Compute ligand expression
   data_lig_exp <- get.gene.expr(
     exp.tbl   = data,
     anno.tbl  = anno.tbl,
@@ -117,8 +119,10 @@ FunRes <- function(
     cell.type = pops
   )
   if (is.null(dim(data_lig_exp))) {
-    data_lig_exp <- matrix(data_lig_exp, ncol = 1,
-                            dimnames = list(names(data_lig_exp), NULL))
+    data_lig_exp <- matrix(
+      data_lig_exp, ncol = 1,
+      dimnames = list(names(data_lig_exp), NULL)
+    )
   }
   colnames(data_lig_exp) <- paste0("Ligand.", colnames(data_lig_exp))
   L_frame <- dplyr::inner_join(
@@ -127,12 +131,13 @@ FunRes <- function(
     by = c("Ligand.gene" = "Ligand")
   )
 
-  # 9) Save temporary data
+  # 9) Save temp data
   save(data, anno.tbl, data_lig_exp, L_frame,
        file = file.path(tmpdir, "temp_data.RData"))
+  rm(data_lig_exp)
 
   # 10) Per-population processing
-  res_list <- list()
+  res_list <- setNames(vector("list", length(pops)), pops)
   for (ct in pops) {
     data_ct <- data[, colnames(data) == ct, drop = FALSE]
     saveRDS(data_ct, file = file.path(tmpdir, paste0("temp_", ct, ".Rds")))
@@ -157,7 +162,7 @@ FunRes <- function(
 
   # 11) Collate results
   LR_all   <- do.call(rbind, lapply(res_list, function(x) x$hotspot$path.sums))
-  RTF_info <- do.call(rbind, lapply(names(res_list), function(ct) {
+  RTF_df   <- do.call(rbind, lapply(names(res_list), function(ct) {
     df <- res_list[[ct]]$hotspot$iTF.targets
     cbind(celltype = ct, df)
   }))
@@ -168,17 +173,23 @@ FunRes <- function(
   # 12) Bootstrapping
   load(file.path(tmpdir, "temp_data.RData"))
   final <- Bootstrap.NewScoring(
-    data, LR = LR_all, R.TF = RTF_info, significance.cutoff = 0.7
+    data, LR = LR_all, R.TF = RTF_df, significance.cutoff = 0.7
   )
   saveRDS(final, file = file.path(out.path, "tissue_LR_with_bootstrap.Rds"))
   write.table(final, file = file.path(out.path, "tissue_LR_with_bootstrap.txt"),
               sep = "\t", row.names = FALSE, quote = FALSE)
 
-  # 13) Finalize
+  # 13) Final outputs
   res_list$final <- final
   saveRDS(res_list, file = file.path(out.path, paste0("output_", tissue.name, ".Rds")))
+
+  # 14) Generate markers
   if (gen.markers) {
-    parts <- funres_partitions(output = res_list, out.path = out.path, tissue.name = tissue.name)
+    parts <- funres_partitions(
+      output      = res_list,
+      out.path    = out.path,
+      tissue.name = tissue.name
+    )
     gen.markers(parts, out.path = out.path, tissue.name = tissue.name)
   }
 
