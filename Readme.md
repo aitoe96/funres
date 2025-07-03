@@ -11,12 +11,12 @@ This tool was pas published in the following article:
 
 ## Installation
 
- 1) Instalar Bioconductor (si aún no lo tienes)
+ 1) Install Bioconductor (if needed)
 ```r
 if (!requireNamespace("BiocManager", quietly=TRUE))
   install.packages("BiocManager")
 ```
- 2) Instalar las dependencias de Bioconductor
+ 2) Install Bioconductor dependencies 
 ```r
 BiocManager::install(c("clusterProfiler", "org.Hs.eg.db", "org.Mm.eg.db", "RSpectra"))
 ```
@@ -27,7 +27,7 @@ install.packages(c("data.table","doParallel","dplyr","ggplot2","gtools",
   "igraph","Matrix","pheatmap","plyr","reshape2","rlist",
   "Seurat","snow","stringr","taRifx","textshape"))
 ```
- 4) Instalar funres desde GitHub
+ 4) Install funres from GitHub
 ```r
 if (!requireNamespace("remotes", quietly=TRUE))
   install.packages("remotes")
