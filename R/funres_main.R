@@ -17,7 +17,7 @@
   suppressPackageStartupMessages({
     require(textshape)
     require(ggplot2)
-    require(stutils)
+    require(selma)
     require(dplyr)
     require(doParallel)
     require(stringr)
@@ -43,8 +43,8 @@
 
 FunRes <- function(data,anno.tbl,species,sighot.cutoff=0.1,sighot.percentile=70,consv.thrs=0.1,n=1000,ncores=4,z.score.cutoff=2,tissue.name,temp.folder.name,out.path,gen.markers=TRUE){
   
-  source("funres_library.R")
-  source("for_plotting_network_functions.R")
+  #source("funres_library.R")
+  #source("for_plotting_network_functions.R")
   
 
   system(paste0("mkdir ",out.path))
