@@ -113,8 +113,14 @@ FunRes <- function(
   pops <- setdiff(unique(anno.tbl$cell.type), rm.types)
   anno.tbl <- anno.tbl[anno.tbl$cell.type %in% pops, ]
 
-  # === Compute ligand expression per population ===
-  data_lig_exp <- get.gene.expr(data, intersect(Ligands, rownames(data)), pops)
+    # === Compute ligand expression per population ===
+  data_lig_exp <- get.gene.expr(
+    exp.tbl = data,
+    anno.tbl = anno.tbl,
+    genes   = intersect(Ligands, rownames(data)),
+    cell.type = pops
+  )
+  # Ensure matrix format even if only one population
   if (is.null(dim(data_lig_exp))) {
     data_lig_exp <- matrix(
       data_lig_exp,
