@@ -154,10 +154,12 @@ FunRes <- function(
     saveRDS(sub, file = file.path(tmpdir, paste0("temp_", ct, ".Rds")))
     mi <- get.cons.tfs(sub)
     if (is.list(mi)) {
+      # Prepare sig input: select rows corresponding to tf.max.mat.cell
       sig <- data.frame(
         Gene = rownames(sub)[mi$tf.max.mat.cell],
-        sub[, mi$tf.max.mat.cell, drop = FALSE],
-        check.names = FALSE
+        sub[mi$tf.max.mat.cell, , drop = FALSE],
+        check.names = FALSE,
+        stringsAsFactors = FALSE
       )
       hs <- SigHotSpotter_pipeline(
         idata      = sig,
@@ -171,7 +173,7 @@ FunRes <- function(
     }
   }
 
-  # 13) Collate results
+# 13) Collate results
   LR_all <- do.call(rbind, lapply(res_list, function(x) x$hotspot$path.sums))
   RTF_df <- do.call(rbind, lapply(names(res_list), function(ct) {
     df <- res_list[[ct]]$hotspot$iTF.targets
